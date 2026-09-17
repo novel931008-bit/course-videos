@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<!-- 不讓搜尋引擎收錄；若希望能被 Google 搜尋到，刪除下一行即可 -->
+<meta name="robots" content="noindex, nofollow">
+<title>課程影片總覽</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #fff; --surface-2: #f0f2f5; --text: #1b1f24; --muted: #5d6671;
+    --line: #e2e5e9; --accent: #1f5fd6; --accent-text: #fff; --focus: #1f5fd6;
+    --badge-s: 75%; --badge-l: 93%; --badge-fs: 50%; --badge-fl: 30%;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1115; --surface: #161a20; --surface-2: #1d222a; --text: #e6e9ed; --muted: #9aa3ad;
+      --line: #2a3039; --accent: #6b9dff; --accent-text: #0e1115; --focus: #8fb4ff;
+      --badge-s: 30%; --badge-l: 22%; --badge-fs: 85%; --badge-fl: 82%;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 "Segoe UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+  }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 56px; }
+  header h1 { margin: 0; font-size: 1.7rem; letter-spacing: .02em; }
+  header p.desc { margin: 6px 0 0; color: var(--muted); white-space: pre-line; }
+  .meta { margin-top: 8px; color: var(--muted); font-size: .88rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 14px; align-items: center; }
+  .toolbar input, .toolbar select, .toolbar button {
+    font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 12px; min-height: 40px;
+  }
+  .toolbar input[type=search] { flex: 1 1 240px; min-width: 0; }
+  .toolbar select { flex: 0 1 170px; min-width: 0; }
+  .toolbar button { flex: none; cursor: pointer; white-space: nowrap; }
+  .toolbar button:hover { background: var(--surface-2); }
+  .count { margin: 0 0 10px; color: var(--muted); font-size: .88rem; }
+
+  .table-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: middle; padding: 12px 14px; }
+  thead th { font-size: .82rem; font-weight: 600; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tbody tr.first td { border-top: 1px solid var(--line); }
+  tbody tr:first-child td { border-top: 0; }
+  tbody tr.band td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+  .c-date { width: 118px; white-space: nowrap; }
+  .c-subject { width: 130px; }
+  .c-teacher { width: 130px; }
+  .c-video { width: 250px; }
+  .date-main { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .date-sub { display: block; font-size: .78rem; color: var(--muted); }
+  tr.repeat .c-date > * { opacity: 0; }
+  .unit { font-weight: 500; overflow-wrap: anywhere; }
+  .muted { color: var(--muted); }
+  .tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; font-size: .72rem; border: 1px solid var(--line); color: var(--muted); vertical-align: 1px; }
+
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .84rem; font-weight: 600; white-space: nowrap;
+    background: hsl(var(--h) var(--badge-s) var(--badge-l)); color: hsl(var(--h) var(--badge-fs) var(--badge-fl));
+  }
+
+  .video { display: flex; align-items: center; gap: 10px; }
+  .thumb {
+    position: relative; flex: none; width: 112px; aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: 6px;
+    overflow: hidden; cursor: pointer; background: var(--surface-2);
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb::after {
+    content: ""; position: absolute; inset: 0; margin: auto; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M9 7v10l8-5z'/%3E%3C/svg%3E") center / 18px no-repeat;
+    transition: transform .15s;
+  }
+  .thumb:hover::after { transform: scale(1.12); }
+  .video-links { display: flex; flex-direction: column; gap: 2px; font-size: .88rem; }
+  .video-links button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+  .video-links button:hover, .video-links a:hover { text-decoration: underline; }
+  .video-links a { text-decoration: none; }
+
+  .state { padding: 48px 20px; text-align: center; color: var(--muted); }
+  .link-btn { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  footer { margin-top: 28px; color: var(--muted); font-size: .8rem; text-align: center; }
+
+  dialog#player {
+    width: min(960px, calc(100vw - 32px)); padding: 0; border: 0; border-radius: 12px;
+    background: #000; color: #fff; overflow: hidden;
+  }
+  dialog#player::backdrop { background: rgba(0,0,0,.72); }
+  .player-head { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #111; }
+  .player-head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .player-head a { color: #9cc0ff; white-space: nowrap; font-size: .88rem; }
+  .player-head button { font: inherit; font-size: 1.1rem; color: #fff; background: none; border: 0; cursor: pointer; padding: 2px 6px; }
+  .player-frame { aspect-ratio: 16 / 9; }
+  .player-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 22px 16px 40px; }
+    header h1 { font-size: 1.4rem; }
+    .toolbar select { flex: 1 1 140px; }
+    .table-card { background: none; border: 0; box-shadow: none; overflow: visible; }
+    thead { display: none; }
+    table, tbody { display: block; }
+    tbody tr {
+      display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+      grid-template-areas: "subject date" "unit unit" "teacher teacher" "video video";
+      padding: 14px 16px; margin-bottom: 10px; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+    }
+    tbody tr td, tbody tr.band td, tbody tr.first td { display: block; padding: 0; border: 0; background: none; width: auto; }
+    tr.repeat .c-date > * { opacity: 1; }
+    .c-date { grid-area: date; text-align: right; }
+    .date-sub { display: inline; margin-left: 4px; }
+    .c-subject { grid-area: subject; }
+    .c-unit { grid-area: unit; font-size: 1.05rem; }
+    .c-teacher { grid-area: teacher; font-size: .9rem; }
+    .c-teacher::before { content: "老師："; color: var(--muted); }
+    .c-video { grid-area: video; margin-top: 8px; }
+    .thumb { width: 128px; }
+    .state { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="site-title">課程影片總覽</h1>
+    <p class="desc" id="site-desc" hidden></p>
+    <div class="meta" id="meta">載入中…</div>
+  </header>
+
+  <div class="toolbar" role="search">
+    <label class="sr-only" for="q">搜尋</label>
+    <input id="q" type="search" placeholder="搜尋科別、單元、老師或日期…" autocomplete="off">
+    <label class="sr-only" for="f-subject">科別</label>
+    <select id="f-subject"><option value="">全部科別</option></select>
+    <label class="sr-only" for="f-teacher">老師</label>
+    <select id="f-teacher"><option value="">全部老師</option></select>
+    <button id="sort" type="button" aria-live="polite">日期：新 → 舊</button>
+  </div>
+
+  <p class="count" id="count" aria-live="polite"></p>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" class="c-date">上課日期</th>
+          <th scope="col" class="c-subject">科別</th>
+          <th scope="col" class="c-unit">單元</th>
+          <th scope="col" class="c-teacher">老師</th>
+          <th scope="col" class="c-video">上課影片</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="state" id="state" hidden></div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<dialog id="player" aria-labelledby="player-title">
+  <div class="player-head">
+    <strong id="player-title"></strong>
+    <a id="player-yt" href="#" target="_blank" rel="noopener">在 YouTube 開啟 ↗</a>
+    <button id="player-close" type="button" aria-label="關閉">✕</button>
+  </div>
+  <div class="player-frame" id="player-frame"></div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

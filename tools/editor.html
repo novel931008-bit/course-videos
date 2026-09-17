@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>課程編輯器</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✏️</text></svg>">
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #fff; --surface-2: #f0f2f5; --text: #1b1f24; --muted: #5d6671; --line: #dfe3e8;
+    --accent: #1f5fd6; --accent-text: #fff; --ok: #177245; --warn: #9a5b00; --err: #c02a2a;
+    --ok-bg: #e5f5ec; --warn-bg: #fdf1dc; --err-bg: #fde8e8; --info-bg: #e6eefc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1115; --surface: #161a20; --surface-2: #1d222a; --text: #e6e9ed; --muted: #9aa3ad; --line: #2c333d;
+      --accent: #6b9dff; --accent-text: #0e1115; --ok: #6fd39c; --warn: #f0b95a; --err: #ff8a8a;
+      --ok-bg: #16301f; --warn-bg: #33270f; --err-bg: #3a1717; --info-bg: #17243d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.55 "Segoe UI", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 6px 12px; }
+  button:hover:not(:disabled) { background: var(--surface-2); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+  input, textarea { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  input.invalid { border-color: var(--err); background: var(--err-bg); }
+  textarea { resize: vertical; }
+
+  .topbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .topbar h1 { margin: 0 6px 0 0; font-size: 1.15rem; }
+  .spacer { flex: 1; }
+  .pill { padding: 2px 10px; border-radius: 999px; font-size: .82rem; font-weight: 600; white-space: nowrap; }
+  .pill.dirty { background: var(--warn-bg); color: var(--warn); }
+  .pill.pending { background: var(--info-bg); color: var(--accent); }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.off { background: var(--surface-2); color: var(--muted); }
+  .topbar a.btn { text-decoration: none; border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; color: var(--text); }
+  .topbar a.btn:hover { background: var(--surface-2); }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 18px 20px 120px; }
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  section h2 { margin: 0 0 10px; font-size: 1rem; display: flex; align-items: center; gap: 10px; }
+  section h2 .spacer { flex: 1; }
+  .hint { color: var(--muted); font-size: .85rem; margin: 4px 0 0; }
+  .settings { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; }
+  .settings label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  .quick { display: flex; gap: 10px; align-items: stretch; }
+  .quick textarea { flex: 1; min-height: 42px; }
+  .notice { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; min-width: 1060px; border-collapse: collapse; }
+  th { text-align: left; font-size: .8rem; color: var(--muted); font-weight: 600; padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 6px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  tr.flash td { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: var(--info-bg); } to { background: transparent; } }
+  td.num { color: var(--muted); text-align: right; padding-top: 12px; width: 36px; font-variant-numeric: tabular-nums; }
+  col.c-date { width: 150px; } col.c-subject { width: 140px; } col.c-teacher { width: 130px; }
+  col.c-url { width: 330px; } col.c-ops { width: 138px; }
+  td.ops { white-space: nowrap; }
+  td.ops button { padding: 4px 8px; }
+  td.ops button.del:hover:not(:disabled) { color: var(--err); border-color: var(--err); }
+  .info { font-size: .8rem; margin-top: 3px; overflow-wrap: anywhere; }
+  .info.ok { color: var(--muted); }
+  .info.ok::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+  .info.warn { color: var(--warn); }
+  .info.err { color: var(--err); }
+  .info a { color: inherit; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); }
+  .add-row { margin-top: 12px; }
+
+  .actionbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px; background: var(--surface); border-top: 1px solid var(--line); }
+  #msg { flex: 1; min-width: 0; white-space: pre-line; max-height: 5.2em; overflow: auto; }
+  #msg.ok { color: var(--ok); } #msg.error { color: var(--err); } #msg.busy { color: var(--muted); }
+  details.log { margin-top: 0; }
+  details.log pre { margin: 10px 0 0; padding: 12px; background: var(--surface-2); border-radius: 8px; overflow: auto; max-height: 320px; font-size: .8rem; white-space: pre-wrap; }
+  .closed { max-width: 520px; margin: 18vh auto; text-align: center; }
+
+  @media (max-width: 760px) {
+    .settings { grid-template-columns: 1fr; }
+    .quick { flex-direction: column; }
+    main { padding: 14px 12px 140px; }
+    .actionbar { flex-wrap: wrap; }
+    #msg { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>✏️ 課程編輯器</h1>
+  <span class="pill off" id="status">載入中…</span>
+  <span class="spacer"></span>
+  <a class="btn" href="/site/" target="_blank" rel="noopener">預覽網站</a>
+  <a class="btn" id="live-link" href="#" target="_blank" rel="noopener" hidden>線上網站 ↗</a>
+  <button type="button" id="btn-quit">結束編輯器</button>
+</div>
+
+<main>
+  <p class="notice" id="git-notice" hidden></p>
+
+  <section>
+    <h2>網站設定</h2>
+    <div class="settings">
+      <div>
+        <label for="site-title">網站標題</label>
+        <input id="site-title" maxlength="80">
+      </div>
+      <div>
+        <label for="site-desc">網站說明（選填，會顯示在標題下方）</label>
+        <textarea id="site-desc" rows="1" maxlength="500"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>快速新增</h2>
+    <div class="quick">
+      <textarea id="quick-urls" rows="2" placeholder="貼上 YouTube 影片連結，可一次貼多個（一行一個）"></textarea>
+      <button type="button" class="primary" id="btn-quick">加入列表</button>
+    </div>
+    <p class="hint">會自動讀取影片標題；標題是「9/9 生理學：單元名稱」這種格式時，日期、科別、單元會自動填好，你只要補上老師。</p>
+  </section>
+
+  <section>
+    <h2>課程列表 <span class="hint" id="row-count"></span><span class="spacer"></span>
+      <button type="button" id="btn-check">重新檢查影片連結</button></h2>
+    <div class="table-wrap">
+      <table>
+        <colgroup><col><col class="c-date"><col class="c-subject"><col><col class="c-teacher"><col class="c-url"><col class="c-ops"></colgroup>
+        <thead>
+          <tr><th></th><th>上課日期 *</th><th>科別 *</th><th>單元 *</th><th>老師</th><th>影片連結</th><th></th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" hidden>還沒有任何課程。按下方「新增一列」，或在上面貼上影片連結。</div>
+    <button type="button" class="add-row" id="btn-add">＋ 新增一列</button>
+    <p class="hint">儲存時會自動依日期排序；同一天的課可以用 ↑ ↓ 調整先後順序。影片還沒上傳的課，連結可以先留空。</p>
+  </section>
+
+  <section>
+    <details class="log" id="log-box">
+      <summary>發布紀錄（發布失敗時看這裡）</summary>
+      <pre id="log">（尚未發布）</pre>
+    </details>
+  </section>
+</main>
+
+<div class="actionbar">
+  <div id="msg" role="status" aria-live="polite"></div>
+  <button type="button" id="btn-save">儲存 <span class="hint">Ctrl+S</span></button>
+  <button type="button" class="primary" id="btn-publish">儲存並發布到網站</button>
+</div>
+
+<datalist id="dl-subject"></datalist>
+<datalist id="dl-teacher"></datalist>
+
+<script>
+'use strict';
+const TOKEN = '__EDITOR_TOKEN__';
+const LABELS = { date: '上課日期', subject: '科別', unit: '單元', teacher: '老師', url: '影片連結' };
+const $ = (id) => document.getElementById(id);
+const infoCache = new Map();
+let rows = [];
+let gitInfo = { repo: false, remote: '', siteUrl: '', pending: false };
+let dirty = false;
+let busy = false;
+let version = 0;
+let keySeq = 0;
+
+// ---------- helpers ----------
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children.flat()) if (c != null && c !== false) e.append(c);
+  return e;
+}
+const pad = (n) => String(n).padStart(2, '0');
+const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const isHttp = (u) => /^https?:\/\/\S+$/i.test(u || '');
+const ytId = (u) => (/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/.exec(u || '') || [])[1] || null;
+const rowTr = (row) => document.querySelector(`tr[data-key="${row._key}"]`);
+
+// YouTube 分享連結裡的 ?si= 是分享者的追蹤碼，順手拿掉
+function cleanUrl(u) {
+  u = (u || '').trim();
+  if (!ytId(u)) return u;
+  try {
+    const url = new URL(u);
+    for (const p of ['si', 'feature', 'pp']) url.searchParams.delete(p);
+    return url.toString();
+  } catch {
+    return u;
+  }
+}
+
+function showMsg(text, type) {
+  $('msg').textContent = text;
+  $('msg').className = type || '';
+}
+
+async function api(path, body) {
+  const opt = { headers: { 'X-Editor-Token': TOKEN } };
+  if (body !== undefined) {
+    opt.method = 'POST';
+    opt.headers['Content-Type'] = 'application/json';
+    opt.body = JSON.stringify(body);
+  }
+  try {
+    const r = await fetch(path, opt);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok && j.ok === undefined) Object.assign(j, { ok: false, error: `編輯器回應錯誤（HTTP ${r.status}），請重新開啟編輯器。` });
+    return j;
+  } catch {
+    return { ok: false, error: '無法連線到編輯器，請確認「編輯課程」的黑色視窗還開著。' };
+  }
+}
+
+// 「9/9 生理學：Cellular physiology I」→ 日期、科別、單元；年份取離今天最近的一年
+function parseTitle(title) {
+  const m = /^\s*(\d{1,2})\s*[/／]\s*(\d{1,2})\s*(?:[（(][^）)]*[）)])?\s*(.+?)\s*[：:]\s*(.+?)\s*$/.exec(title || '');
+  if (!m) return null;
+  const month = +m[1], day = +m[2];
+  const now = new Date();
+  let best = null;
+  for (const y of [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]) {
+    const d = new Date(y, month - 1, day);
+    if (d.getMonth() !== month - 1 || d.getDate() !== day) continue;
+    if (!best || Math.abs(d - now) < Math.abs(best - now)) best = d;
+  }
+  return best ? { date: fmtDate(best), subject: m[3], unit: m[4] } : null;
+}
+
+// ---------- 影片資訊 ----------
+// 回傳 null（沒填）、物件（不用連網就能判斷），或 undefined（需要問 YouTube）
+function localInfo(url) {
+  url = (url || '').trim();
+  if (!url) return null;
+  if (!isHttp(url)) return { ok: false, level: 'err', error: '請輸入完整網址（https:// 開頭）' };
+  if (!ytId(url)) return { ok: false, level: 'warn', error: '不是 YouTube 連結，網站上會顯示成一般連結' };
+  return undefined;
+}
+
+async function fetchInfo(row, autofill) {
+  const url = row.url.trim();
+  const local = localInfo(url);
+  if (local !== undefined) { row._info = local; return; }
+  let info = infoCache.get(url);
+  if (!info) {
+    row._info = { loading: true };
+    syncRow(row);
+    info = await api('/api/oembed?url=' + encodeURIComponent(url));
+    if (!info.ok) info.level = /無法連線|回應錯誤/.test(info.error || '') ? 'warn' : 'err';
+    if (info.ok || info.level === 'err') infoCache.set(url, info);
+  }
+  if (row.url.trim() !== url) return;
+  row._info = info;
+  if (autofill && info.ok) {
+    const p = parseTitle(info.title);
+    if (p && !row.subject.trim() && !row.unit.trim()) {
+      if (row._autoDate) row.date = p.date;
+      row.subject = p.subject;
+      row.unit = p.unit;
+    } else if (!p && !row.unit.trim()) {
+      row.unit = info.title;
+    }
+  }
+}
+
+async function checkAll(force) {
+  if (force) infoCache.clear();
+  const list = rows.filter((r) => r.url.trim());
+  let next = 0;
+  const worker = async () => {
+    while (next < list.length) {
+      const r = list[next++];
+      await fetchInfo(r, false);
+      syncRow(r);
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+}
+
+// ---------- 表格 ----------
+function newRow(values) {
+  return { date: fmtDate(new Date()), subject: '', unit: '', teacher: '', url: '', _autoDate: true, _info: null, ...values, _key: ++keySeq };
+}
+
+function setTeacherHint(row, tr = rowTr(row)) {
+  const inp = tr && tr.querySelector('input[data-field="teacher"]');
+  if (!inp) return;
+  const prev = row.subject.trim() && [...rows].reverse().find((r) => r !== row && r.subject.trim() === row.subject.trim() && r.teacher.trim());
+  inp.placeholder = prev ? `上次：${prev.teacher.trim()}` : '可留空';
+}
+
+function syncRow(row, tr = rowTr(row)) {
+  if (!tr) return;
+  for (const inp of tr.querySelectorAll('input[data-field]')) {
+    const v = row[inp.dataset.field];
+    if (inp.value !== v) inp.value = v;
+  }
+  setTeacherHint(row, tr);
+  const box = tr.querySelector('[data-info]');
+  const i = row._info;
+  box.className = 'info';
+  box.replaceChildren();
+  if (!i) return;
+  if (i.loading) {
+    box.textContent = '讀取影片資訊中…';
+  } else if (i.ok) {
+    box.classList.add('ok');
+    box.append(el('a', { href: row.url.trim(), target: '_blank', rel: 'noopener', title: '在新分頁開啟影片' }, i.title || '（沒有標題）'));
+  } else {
+    box.classList.add(i.level || 'err');
+    box.textContent = '⚠ ' + (i.error || '無法讀取影片資訊');
+  }
+}
+
+function refreshDatalists() {
+  const fill = (id, values) => $(id).replaceChildren(
+    ...[...new Set(values.map((v) => v.trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+      .map((v) => el('option', { value: v })));
+  fill('dl-subject', rows.map((r) => r.subject));
+  fill('dl-teacher', rows.map((r) => r.teacher));
+}
+
+function rowEl(row, i) {
+  const field = (name, attrs) => {
+    const inp = el('input', { 'data-field': name, 'aria-label': `${LABELS[name]}（第 ${i + 1} 列）`, ...attrs });
+    inp.value = row[name];
+    inp.addEventListener('input', () => {
+      row[name] = inp.value;
+      inp.classList.remove('invalid');
+      if (name === 'date') row._autoDate = false;
+      if (name === 'subject') setTeacherHint(row);
+      markDirty();
+    });
+    return inp;
+  };
+  const subject = field('subject', { list: 'dl-subject', placeholder: '例：生理學' });
+  const teacher = field('teacher', { list: 'dl-teacher', placeholder: '可留空' });
+  const url = field('url', { type: 'url', placeholder: 'https://youtu.be/…', spellcheck: 'false' });
+  subject.addEventListener('change', refreshDatalists);
+  teacher.addEventListener('change', refreshDatalists);
+  url.addEventListener('change', async () => {
+    row.url = url.value = cleanUrl(url.value);
+    await fetchInfo(row, true);
+    syncRow(row);
+    refreshDatalists();
+  });
+
+  const tr = el('tr', { 'data-key': row._key },
+    el('td', { class: 'num' }, String(i + 1)),
+    el('td', null, field('date', { type: 'date', required: true })),
+    el('td', null, subject),
+    el('td', null, field('unit', { placeholder: '單元名稱' })),
+    el('td', null, teacher),
+    el('td', null, url, el('div', { class: 'info', 'data-info': '' })),
+    el('td', { class: 'ops' },
+      el('button', { type: 'button', class: 'up', title: '上移', 'aria-label': `第 ${i + 1} 列上移`, disabled: i === 0, onclick: () => move(i, -1) }, '↑'),
+      el('button', { type: 'button', class: 'down', title: '下移', 'aria-label': `第 ${i + 1} 列下移`, disabled: i === rows.length - 1, onclick: () => move(i, 1) }, '↓'),
+      el('button', { type: 'button', class: 'del', 'aria-label': `刪除第 ${i + 1} 列`, onclick: () => remove(i) }, '刪除')));
+  syncRow(row, tr);
+  return tr;
+}
+
+function render() {
+  $('rows').replaceChildren(...rows.map(rowEl));
+  $('empty').hidden = rows.length > 0;
+  $('row-count').textContent = rows.length ? `共 ${rows.length} 堂` : '';
+  refreshDatalists();
+}
+
+function flash(row) {
+  const tr = rowTr(row);
+  if (!tr) return;
+  tr.classList.remove('flash');
+  void tr.offsetWidth;
+  tr.classList.add('flash');
+}
+
+function focusIn(row, selector) {
+  const tr = rowTr(row);
+  const target = tr && tr.querySelector(selector);
+  (target && !target.disabled ? target : tr && tr.querySelector('button.del'))?.focus();
+}
+
+function move(i, d) {
+  const j = i + d;
+  if (j < 0 || j >= rows.length) return;
+  [rows[i], rows[j]] = [rows[j], rows[i]];
+  if (rows[i].date !== rows[j].date) showMsg('提醒：儲存時會依日期重新排序，只有「同一天」的課能調整先後順序。', 'busy');
+  markDirty();
+  render();
+  focusIn(rows[j], d < 0 ? 'button.up' : 'button.down');
+  flash(rows[j]);
+}
+
+function remove(i) {
+  const r = rows[i];
+  const label = [r.date, r.subject, r.unit].map((s) => s.trim()).filter(Boolean).join('　');
+  if ((r.subject.trim() || r.unit.trim() || r.url.trim()) && !confirm(`確定要刪除第 ${i + 1} 列嗎？\n${label}`)) return;
+  rows.splice(i, 1);
+  markDirty();
+  render();
+  const next = rows[Math.min(i, rows.length - 1)];
+  if (next) focusIn(next, 'button.del'); else $('btn-add').focus();
+}
+
+function addRow() {
+  const row = newRow();
+  rows.push(row);
+  markDirty();
+  render();
+  rowTr(row).scrollIntoView({ block: 'center', behavior: 'smooth' });
+  rowTr(row).querySelector('input[data-field="url"]').focus();
+  flash(row);
+}
+
+async function quickAdd() {
+  const box = $('quick-urls');
+  const lines = box.value.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  if (!lines.length) { showMsg('請先貼上影片連結。', 'error'); box.focus(); return; }
+  const bad = lines.filter((u) => !isHttp(u));
+  const seen = new Set(rows.map((r) => ytId(r.url) || r.url.trim()));
+  const added = [];
+  let skipped = 0;
+  for (const u of lines.filter(isHttp).map(cleanUrl)) {
+    const key = ytId(u) || u;
+    if (seen.has(key)) { skipped++; continue; }
+    seen.add(key);
+    added.push(newRow({ url: u }));
+  }
+  box.value = bad.join('\n');
+  const notes = [];
+  if (skipped) notes.push(`${skipped} 個連結已經在列表中，已略過`);
+  if (bad.length) notes.push(`${bad.length} 行不是有效的網址，留在輸入框裡`);
+  if (!added.length) { showMsg(notes.join('；') || '沒有可加入的連結。', 'error'); return; }
+
+  rows.push(...added);
+  markDirty();
+  render();
+  rowTr(added[0]).scrollIntoView({ block: 'center', behavior: 'smooth' });
+  showMsg(`正在讀取 ${added.length} 支影片的資訊…`, 'busy');
+  $('btn-quick').disabled = true;
+  await Promise.all(added.map(async (row) => { await fetchInfo(row, true); syncRow(row); flash(row); }));
+  $('btn-quick').disabled = false;
+  refreshDatalists();
+  const incomplete = added.filter((r) => !r.subject.trim() || !r.unit.trim()).length;
+  notes.unshift(`已加入 ${added.length} 列` + (incomplete ? `（其中 ${incomplete} 列需要手動補上科別或單元）` : ''));
+  showMsg(notes.join('；') + '。補上老師後，按「儲存並發布到網站」。', 'ok');
+}
+
+// ---------- 儲存 / 發布 ----------
+function validate() {
+  document.querySelectorAll('input.invalid').forEach((i) => i.classList.remove('invalid'));
+  const problems = [];
+  let firstBad = null;
+  rows.forEach((r, i) => {
+    const tr = rowTr(r);
+    const mark = (f, msg) => {
+      problems.push(`第 ${i + 1} 列：${msg}`);
+      const inp = tr && tr.querySelector(`input[data-field="${f}"]`);
+      if (inp) { inp.classList.add('invalid'); firstBad = firstBad || inp; }
+    };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date)) mark('date', '請選擇上課日期');
+    if (!r.subject.trim()) mark('subject', '請填寫科別');
+    if (!r.unit.trim()) mark('unit', '請填寫單元');
+    if (r.url.trim() && !isHttp(r.url.trim())) mark('url', '影片連結格式不正確');
+  });
+  if (!problems.length) return true;
+  showMsg(`還有 ${problems.length} 個欄位要處理：\n${problems.slice(0, 3).join('\n')}${problems.length > 3 ? '\n…' : ''}`, 'error');
+  if (firstBad) { firstBad.scrollIntoView({ block: 'center' }); firstBad.focus(); }
+  return false;
+}
+
+const payload = () => ({
+  title: $('site-title').value,
+  description: $('site-desc').value,
+  courses: rows.map(({ date, subject, unit, teacher, url }) => ({ date, subject, unit, teacher, url })),
+});
+
+function loadData(data) {
+  $('site-title').value = data.title || '';
+  $('site-desc').value = data.description || '';
+  rows = (data.courses || []).map((c) => {
+    const row = newRow({ date: c.date || '', subject: c.subject || '', unit: c.unit || '', teacher: c.teacher || '', url: c.url || '', _autoDate: false });
+    const local = localInfo(row.url);
+    row._info = local !== undefined ? local : (infoCache.get(row.url.trim()) || null);
+    return row;
+  });
+  render();
+}
+
+function markDirty() {
+  dirty = true;
+  version++;
+  updateStatus();
+}
+
+function setBusy(b) {
+  busy = b;
+  updateStatus();
+}
+
+function updateStatus() {
+  const connected = gitInfo.repo && !!gitInfo.remote;
+  const [cls, text] = dirty ? ['dirty', '● 尚未儲存']
+    : !connected ? ['off', '已儲存在本機（尚未連結 GitHub）']
+    : gitInfo.pending ? ['pending', '已儲存，尚未發布']
+    : ['ok', '✓ 網站已是最新'];
+  $('status').className = `pill ${cls}`;
+  $('status').textContent = text;
+  $('live-link').hidden = !gitInfo.siteUrl;
+  if (gitInfo.siteUrl) $('live-link').href = gitInfo.siteUrl;
+  $('btn-save').disabled = busy;
+  $('btn-publish').disabled = busy || !connected;
+  $('btn-publish').title = connected ? '' : '尚未連結 GitHub，請先完成 README 的「第一次設定」';
+  $('git-notice').hidden = connected;
+  $('git-notice').textContent = connected ? '' : '這個資料夾還沒有連結到 GitHub，目前只能儲存在本機、還不能發布。請先完成 README 的「第一次設定」。';
+}
+
+async function save(opts = {}) {
+  if (!validate()) return false;
+  setBusy(true);
+  if (!opts.quiet) showMsg('儲存中…', 'busy');
+  const v = version;
+  const res = await api('/api/save', payload());
+  setBusy(false);
+  if (!res.ok) { showMsg(res.error || '儲存失敗', 'error'); return false; }
+  gitInfo = res.git || gitInfo;
+  if (version !== v) {
+    updateStatus();
+    showMsg('已儲存，但儲存時你又改了內容，請再按一次「儲存」。', 'error');
+    return false;
+  }
+  dirty = false;
+  loadData(res.data);
+  updateStatus();
+  if (!opts.quiet) {
+    const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+    showMsg(`已儲存 ✓（${time}）` + (gitInfo.remote ? '　要讓網站更新，請按「儲存並發布到網站」。' : ''), 'ok');
+  }
+  return true;
+}
+
+async function publishNow() {
+  if (dirty && !(await save({ quiet: true }))) return;
+  const broken = rows.filter((r) => r._info && r._info.level === 'err' && !r._info.loading).length;
+  if (broken && !confirm(`有 ${broken} 個影片連結有問題（例如影片設為「私人」或找不到），其他人會看不到。\n仍要發布嗎？`)) return;
+  setBusy(true);
+  showMsg('發布中…（第一次發布可能會跳出 GitHub 登入視窗，請完成登入）', 'busy');
+  const res = await api('/api/publish', {});
+  setBusy(false);
+  $('log').textContent = res.log || res.error || '（沒有訊息）';
+  gitInfo = res.git || gitInfo;
+  updateStatus();
+  if (res.ok) {
+    showMsg('已發布 ✓　GitHub 大約需要 1 分鐘更新網站，之後重新整理「線上網站」就會看到。', 'ok');
+  } else {
+    $('log-box').open = true;
+    showMsg(res.error || '發布失敗，請看下方「發布紀錄」裡的訊息。', 'error');
+  }
+}
+
+async function quit() {
+  if (dirty && !confirm('還有尚未儲存的修改，確定要結束嗎？')) return;
+  dirty = false;
+  await api('/api/shutdown', {});
+  document.body.replaceChildren(el('div', { class: 'closed' },
+    el('h1', null, '編輯器已關閉'),
+    el('p', { class: 'hint' }, '可以關閉這個分頁了。下次要編輯時，再雙擊資料夾裡的「編輯課程.bat」。')));
+}
+
+// ---------- 啟動 ----------
+$('btn-add').addEventListener('click', addRow);
+$('btn-quick').addEventListener('click', quickAdd);
+$('btn-check').addEventListener('click', () => checkAll(true));
+$('btn-save').addEventListener('click', () => save());
+$('btn-publish').addEventListener('click', publishNow);
+$('btn-quit').addEventListener('click', quit);
+$('quick-urls').addEventListener('paste', () => setTimeout(quickAdd, 0));
+$('quick-urls').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); quickAdd(); }
+});
+for (const id of ['site-title', 'site-desc']) $(id).addEventListener('input', markDirty);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    if (!busy) save();
+  }
+});
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+(async () => {
+  const res = await api('/api/data');
+  if (!res.data) { showMsg(res.error || '無法載入課程資料', 'error'); return; }
+  gitInfo = res.git;
+  loadData(res.data);
+  updateStatus();
+  showMsg('');
+  checkAll(false);
+})();
+</script>
+</body>
+</html>
