@@ -1,20 +1,20 @@
 {
   "title": "課程影片總覽",
   "description": "",
-  "updatedAt": "2026-09-17T22:00:00+08:00",
+  "updatedAt": "2026-09-17T22:40:05+08:00",
   "courses": [
     {
       "date": "2026-09-09",
       "subject": "組織學",
       "unit": "Cytology",
-      "teacher": "",
+      "teacher": "梁育民",
       "url": "https://youtu.be/R3xKvFaKvKc"
     },
     {
       "date": "2026-09-09",
       "subject": "生理學",
       "unit": "Cellular physiology I",
-      "teacher": "",
+      "teacher": "梁育民",
       "url": "https://youtu.be/b6lFzEJPCt0"
     }
   ]
