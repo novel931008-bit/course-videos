@@ -1,7 +1,7 @@
 {
   "title": "課程影片總覽",
   "description": "",
-  "updatedAt": "2026-09-17T22:45:03+08:00",
+  "updatedAt": "2026-09-19T02:15:45+08:00",
   "courses": [
     {
       "date": "2026-09-09",
@@ -16,6 +16,13 @@
       "unit": "Cellular physiology I",
       "teacher": "梁育民",
       "url": "https://youtu.be/b6lFzEJPCt0"
+    },
+    {
+      "date": "2026-09-17",
+      "subject": "臨床診斷學",
+      "unit": "臨床病理概論",
+      "teacher": "王英哲",
+      "url": "https://www.youtube.com/watch?v=_Y_8YiN947E"
     }
   ]
 }
