@@ -1,7 +1,7 @@
 {
   "title": "課程影片總覽",
   "description": "",
-  "updatedAt": "2026-11-07T23:19:11+08:00",
+  "updatedAt": "2026-11-07T23:19:40+08:00",
   "courses": [
     {
       "date": "2026-09-09",
@@ -25,7 +25,7 @@
       "url": "https://www.youtube.com/watch?v=_Y_8YiN947E"
     },
     {
-      "date": "2026-11-07",
+      "date": "2026-11-06",
       "subject": "外科學概論",
       "unit": "骨創基本概念",
       "teacher": "邱詠証醫師",
